@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Gallery - FoodShare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <h1 class="logo"><i class="fa-solid fa-utensils"></i> FoodShare</h1>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="recipes.html">Recipes</a>
+                <a href="upload.html">Upload</a>
+                <a href="media-list.html" class="active">Gallery</a>
+                <a href="ai-tools.html">AI Tools</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container section-container">
+        <h2><i class="fa-solid fa-images"></i> Media Gallery</h2>
+        <p style="margin-bottom: 2rem; color: #666;">Browse uploaded food photography from the community.</p>
+        
+        <div class="search-bar">
+            <div style="flex: 1;">
+                <input type="text" id="filterAuthorId" placeholder="Filter by Author ID">
+            </div>
+            <div style="flex: 1;">
+                <input type="text" id="filterRecipeId" placeholder="Filter by Recipe ID">
+            </div>
+            <button class="btn btn-primary" onclick="loadMedia()">
+                <i class="fa-solid fa-filter"></i> Filter
+            </button>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+        
+        <div id="gallery" class="gallery">
+            </div>
+    </div>
+
+    <div id="loading" class="loading-overlay">
+        <div style="text-align: center;">
+            <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: var(--accent-green);"></i>
+            <p style="margin-top: 1rem;">Loading Gallery...</p>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 FoodShare Portal. Cloud Native Computing.</p>
+    </footer>
+
+    <script src="js/api-config.js"></script>
+    <script src="js/http.js"></script>
+    <script>
+        const showLoading = (show) => document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        const showMessage = (text, type = 'success') => {
+            const el = document.getElementById('messageBox');
+            el.textContent = text;
+            el.className = `message ${type}`;
+            el.style.display = 'block';
+        };
+
+        document.addEventListener('DOMContentLoaded', loadMedia);
+
+        async function loadMedia() {
+            const authorId = document.getElementById('filterAuthorId').value;
+            const recipeId = document.getElementById('filterRecipeId').value;
+
+            showLoading(true);
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+            document.getElementById('messageBox').style.display = 'none';
+
+            try {
+                let url = window.API_CONFIG.RAI_URL;
+                const params = new URLSearchParams();
+                
+                if (authorId) params.append('authorId', authorId);
+                if (recipeId) params.append('recipeId', recipeId);
+                
+                const queryString = params.toString();
+                if (queryString) {
+                    url += (url.includes('?') ? '&' : '?') + queryString;
+                }
+
+                const res = await window.getJson(url);
+
+                if (!res) {
+                    gallery.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No media found.</p>';
+                    return;
+                }
+
+                const items = Array.isArray(res) ? res : (res.items || res.value || []);
+
+                if (items.length === 0) {
+                    gallery.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No images found matching criteria.</p>';
+                    return;
+                }
+
+                items.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'gallery-item';
+                    
+                    const imgUrl = item.blobUrl || 'https://via.placeholder.com/300x200?text=No+Image';
+                    
+                    div.innerHTML = `
+                        <a href="${imgUrl}" target="_blank">
+                            <img src="${imgUrl}" alt="${item.fileName || 'Image'}">
+                        </a>
+                        <div class="gallery-meta">
+                            <strong>${item.fileName || 'Untitled'}</strong><br>
+                            <span style="font-size:0.75rem; color:#888;">By: ${item.authorId || 'Unknown'}</span>
+                        </div>
+                    `;
+                    gallery.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error(err);
+                showMessage('Failed to load media: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+    </script>
+</body>
+</html>
